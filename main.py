@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import scrolledtext, messagebox
+from lex import lexer
+from pars import Parser
 
 
 # Функция для переключения темы

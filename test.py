@@ -8,23 +8,39 @@ def analyze_code(code):
         print("Tokens:", tokens)
         parser = Parser(tokens)
         parser.parse()
-        print("Parsing successful.")
+        print("Successful")
     except SyntaxError as e:
         print("Parsing error:", e)
-        '''for i in range(len(code)):
-            if i == 17:
-                print(code[i - 2])
-                print(code[i - 1])
-                print(code[i])
-                print(code[i + 1], end='')'''
 
 
-code = '''
-program var a: %; 
-begin 
-  a := 0;
-  writeln a;
-end
-'''
+codes = ['''
+    program var a: %; 
+    begin 
+      a := 0;
+      writeln a;
+    end
+    ''', '''
+    program var a: %; 
+    begin 
+      a := 10; 
+      if (a > 5) 
+        writeln 'a больше 5'
+      else 
+        writeln 'a меньше или равно 5'; 
+    end
+    ''', '''
+    program var a, b, s, i: %;
+    begin
+      readln(a, b);
+      sum := 0;
+      for i := a to b step 1 do
+      begin
+        s := s + i;
+      end;
+      writeln('Сумма чисел от ', a, ' до ', b, ' равна ', s);
+    end
+    ''']
 
-analyze_code(code)
+
+for elem in codes:
+    analyze_code(elem)
