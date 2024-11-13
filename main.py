@@ -118,19 +118,17 @@ theme_var = tk.StringVar(value="dark")
 # Панель для кнопок
 button_frame = tk.Frame(root)
 button_frame.pack(fill="x", padx=10, pady=10)
-theme_button = tk.Button(button_frame, text="Темная тема", command=toggle_theme)  # Кнопка смены темы
+theme_button = tk.Button(button_frame, text="Темная тема", command=toggle_theme)
 theme_button.pack(side=tk.LEFT, padx=10)
-start_button = tk.Button(button_frame, text="Запуск", command=run_code)  # Кнопка запуска кода
+start_button = tk.Button(button_frame, text="Запуск", command=run_code)
 start_button.pack(side=tk.RIGHT, padx=10)
-syntax_button = tk.Button(button_frame, text="Синтаксис", command=show_syntax_info)  # Кнопка синтаксиса
+syntax_button = tk.Button(button_frame, text="Синтаксис", command=show_syntax_info)
 syntax_button.pack(side=tk.LEFT, padx=10)
-clear_button = tk.Button(button_frame, text="Очистить вывод", command=clear_console)  # Кнопка очистки консоли
+clear_button = tk.Button(button_frame, text="Очистить вывод", command=clear_console)
 clear_button.pack(side=tk.LEFT, padx=10)
 
-# Текстовое поле для ввода кода
 text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=140, height=35)
 text_area.pack(padx=10, pady=10)
-# Панель для вывода
 console_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=140, height=20, bg="#f0f0f0", fg="#000000")
 console_area.pack(padx=10, pady=10)
 
