@@ -32,6 +32,7 @@ def run_code():
 
 # Функция для вывода справки по синтаксису
 def show_syntax_info():
+    # TODO: Scale window of showinf0 massage
     task_text = '''
     11 вариант 21112
 
@@ -114,7 +115,7 @@ def clear_console():
 
 root = tk.Tk()
 root.title("Распознаватель модельного языка программирования")
-root.geometry("1400x1050")
+root.geometry("1152x864")
 theme_var = tk.StringVar(value="dark")
 
 # Панель для кнопок
