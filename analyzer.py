@@ -5,6 +5,7 @@ from syntax_analyzer import SyntaxAnalyzer
 code = """
 program
 var a, b, s, i: %;
+    r, t, q, g: !;
 begin
     readln(a, b);
     s := 0;
@@ -19,10 +20,14 @@ end.
 lexer = LexicalAnalyzer()
 tokens = lexer.tokenize(code)
 print("Tokens:")
-for elem in tokens:
-    print(elem)
+print(tokens)
+# for elem in tokens:
+    # print(elem)
 
 # Синтаксический анализ
-# parser = SyntaxAnalyzer(tokens)
-# result = parser.parse()
-# print(result)
+parser = SyntaxAnalyzer(tokens)
+try:
+    parser.parse_program()
+    print("OK")
+except SyntaxError as e:
+    print(f"Ошибка синтаксического анализа: {e}")

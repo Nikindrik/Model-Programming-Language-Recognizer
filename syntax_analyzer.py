@@ -1,119 +1,131 @@
 class SyntaxAnalyzer:
     def __init__(self, tokens):
         self.tokens = tokens
-        self.pos = 0
+        self.position = 0
 
-    def parse(self):
-        """Начинает синтаксический анализ."""
-        return self.parse_program()
+    def current_token(self):
+        return self.tokens[self.position] if self.position < len(self.tokens) else None
+
+    def expect(self, token_type, value=None):
+        token = self.current_token()
+        if token and token[0] == token_type and (value is None or token[1] == value):
+            self.position += 1
+            return token
+        raise SyntaxError(f"Expected {token_type} {value}, got {token}")
+
+    def advance(self):
+        """Сдвигает позицию на следующий токен."""
+        self.position += 1
 
     def parse_program(self):
-        """Обрабатывает программу."""
         self.expect('KEYWORD', 'program')
         self.expect('KEYWORD', 'var')
         self.parse_variable_declaration()
         self.expect('KEYWORD', 'begin')
         self.parse_statements()
         self.expect('KEYWORD', 'end')
-        self.expect('DELIMITER', '.')  # Завершение программы
+        self.expect('DELIMITER', '.')
 
     def parse_variable_declaration(self):
-        """Обрабатывает блок объявления переменных."""
-        while self.peek()[0] == 'ID':
-            self.consume('ID')  # Идентификатор
-            if self.peek()[1] == ',':
-                self.consume('DELIMITER', ',')
-            else:
-                self.expect('DELIMITER', ':')
-                self.expect('TYPE')
-                self.expect('DELIMITER', ';')
+        while True:
+            self.parse_identifier_list()
+            self.expect('DELIMITER', ':')
+            self.parse_type()
+            self.expect('DELIMITER', ';')
+            if self.current_token()[0] != 'ID':
                 break
 
-    def parse_statements(self):
-        """Обрабатывает список операторов."""
-        while self.peek()[0] != 'KEYWORD' or self.peek()[1] != 'end':
-            self.parse_statement()
-            if self.peek()[1] == ';':
-                self.consume('DELIMITER', ';')
-
-    def parse_statement(self):
-        """Обрабатывает один оператор."""
-        if self.peek()[0] == 'KEYWORD':
-            if self.peek()[1] == 'for':
-                self.parse_for_loop()
-            elif self.peek()[1] == 'if':
-                self.parse_if_statement()
-            elif self.peek()[1] == 'readln':
-                self.parse_readln()
-            elif self.peek()[1] == 'writeln':
-                self.parse_writeln()
-        else:
-            self.parse_assignment()
-
-    def parse_for_loop(self):
-        """Обрабатывает цикл for."""
-        self.expect('KEYWORD', 'for')
-        self.parse_assignment()
-        self.expect('KEYWORD', 'to')
-        self.parse_expression()
-        if self.peek()[1] == 'step':
-            self.consume('KEYWORD', 'step')
-            self.parse_expression()
-        self.expect('KEYWORD', 'do')
-        self.expect('KEYWORD', 'begin')
-        self.parse_statements()
-        self.expect('KEYWORD', 'end')  # Завершение вложенного блока
-
-    def parse_if_statement(self):
-        """Обрабатывает условный оператор."""
-        self.expect('KEYWORD', 'if')
-        self.expect('DELIMITER', '(')
-        self.parse_expression()
-        self.expect('DELIMITER', ')')
-        self.parse_statement()
-        if self.peek()[1] == 'else':
-            self.consume('KEYWORD', 'else')
-            self.parse_statement()
-
-    def parse_readln(self):
-        """Обрабатывает readln."""
-        self.expect('KEYWORD', 'readln')
+    def parse_identifier_list(self):
         self.expect('ID')
-        while self.peek()[1] == ',':
-            self.consume('DELIMITER', ',')
+        while self.current_token() and self.current_token()[0] == 'DELIMITER' and self.current_token()[1] == ',':
+            self.expect('DELIMITER', ',')
             self.expect('ID')
 
-    def parse_writeln(self):
-        """Обрабатывает writeln."""
-        self.expect('KEYWORD', 'writeln')
-        self.parse_expression()
-        while self.peek()[1] == ',':
-            self.consume('DELIMITER', ',')
-            self.parse_expression()
+    def parse_type(self):
+        self.expect('TYPE')
+
+    def parse_statements(self):
+        while True:
+            token = self.current_token()
+            if token[0] == 'KEYWORD' and token[1] == 'begin':
+                self.parse_compound_statement()  # Обрабатываем вложенные блоки
+            elif token[0] == 'ID':
+                self.parse_assignment()
+            elif token[0] == 'KEYWORD' and token[1] == 'readln':
+                self.parse_input_statement()
+            elif token[0] == 'KEYWORD' and token[1] == 'writeln':
+                self.parse_output_statement()
+            elif token[0] == 'KEYWORD' and token[1] == 'for':
+                self.parse_for_loop()
+            elif token[0] == 'KEYWORD' and token[1] == 'end':
+                return
+            elif token[0] == 'DELIMITER' and token[1] == ';':
+                # Переход к следующему оператору
+                self.advance()  # Сдвигаем токены, ожидаем следующий оператор
+            else:
+                raise SyntaxError(f"Unexpected statement start: {token}")
+
+    def parse_compound_statement(self):
+        self.expect('KEYWORD', 'begin')
+        self.parse_statements()
+        self.expect('KEYWORD', 'end')
 
     def parse_assignment(self):
-        """Обрабатывает присваивание."""
         self.expect('ID')
-        self.expect('ASSIGN')
+        self.expect('ASSIGN', ':=')
         self.parse_expression()
 
+    def parse_input_statement(self):
+        self.expect('KEYWORD', 'readln')
+        self.expect('DELIMITER', '(')
+        self.expect('ID')
+        while self.current_token() and self.current_token()[0] == 'DELIMITER' and self.current_token()[1] == ',':
+            self.expect('DELIMITER', ',')
+            self.expect('ID')
+        self.expect('DELIMITER', ')')
+
+    def parse_output_statement(self):
+        self.expect('KEYWORD', 'writeln')
+        self.expect('DELIMITER', '(')
+        self.parse_expression()
+        while self.current_token() and self.current_token()[0] == 'DELIMITER' and self.current_token()[1] == ',':
+            self.expect('DELIMITER', ',')
+            self.parse_expression()
+        self.expect('DELIMITER', ')')
+
+    def parse_for_loop(self):
+        self.expect('KEYWORD', 'for')
+        self.parse_assignment()  # Обрабатываем присваивание в цикле
+        self.expect('KEYWORD', 'to')
+        self.parse_expression()  # Обрабатываем условие "до"
+        if self.current_token() and self.current_token()[0] == 'KEYWORD' and self.current_token()[1] == 'step':
+            self.expect('KEYWORD', 'step')
+            self.parse_expression()  # Обрабатываем шаг
+        self.expect('ID', 'do')
+        self.parse_statements()  # Обрабатываем тело цикла (один или несколько операторов внутри цикла)
+
     def parse_expression(self):
-        """Обрабатывает выражение."""
-        self.expect('ID')  # Упрощенное выражение
+        self.parse_term()
+        while self.current_token() and self.current_token()[0] in {'ADD_OP', 'REL_OP'}:
+            self.position += 1
+            self.parse_term()
 
-    def consume(self, token_type, value=None):
-        """Потребляет токен, если он соответствует."""
-        if self.pos < len(self.tokens) and self.tokens[self.pos][0] == token_type and (value is None or self.tokens[self.pos][1] == value):
-            self.pos += 1
+    def parse_term(self):
+        self.parse_factor()
+        while self.current_token() and self.current_token()[0] == 'MUL_OP':
+            self.position += 1
+            self.parse_factor()
+
+    def parse_factor(self):
+        token = self.current_token()
+        if token[0] in {'ID', 'NUMBER', 'STRING'}:
+            self.position += 1
+        elif token[0] == 'DELIMITER' and token[1] == '(':
+            self.expect('DELIMITER', '(')
+            self.parse_expression()
+            self.expect('DELIMITER', ')')
+        elif token[0] == 'ADD_OP' and token[1] in {'+', '-'}:
+            self.position += 1
+            self.parse_factor()
         else:
-            raise SyntaxError(f"Expected {token_type} {value}, got {self.peek()}")
-
-    def expect(self, token_type, value=None):
-        """Ожидает токен, иначе вызывает ошибку."""
-        self.consume(token_type, value)
-
-    def peek(self):
-        """Возвращает текущий токен."""
-        if self.pos < len(self.tokens):
-            return self.tokens[self.pos]
-        return None
+            raise SyntaxError(f"Unexpected factor: {token}")
