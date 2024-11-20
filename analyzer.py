@@ -30,7 +30,8 @@ end.
     '''
 ]
 
-code = '''
+code = [
+'''
 program 
 var a, i, sum, k: %;
 	r: !;
@@ -63,23 +64,23 @@ begin
 	readln flag;
 	if (flag)
 	begin
-		while 'flag имеет значение true'
+		writeln 'flag имеет значение true'
 	end
 	else
 	begin
-		while 'flag имеет значение false'
+		writeln 'flag имеет значение false'
 	end
 end.
-'''
+''']
 
-for elem in all_codes:
+for elem in code:
     # Лексический анализ
     lexer = LexicalAnalyzer()
     tokens = lexer.tokenize(elem)
     print("Tokens:")
-    print(tokens)
-    # for jlem in tokens:
-        # print(jlem)
+    # print(tokens)
+    for jlem in tokens:
+        print(jlem)
 
     # Синтаксический анализ
     parser = SyntaxAnalyzer(tokens)

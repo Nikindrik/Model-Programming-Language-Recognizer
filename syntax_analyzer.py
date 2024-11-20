@@ -46,7 +46,9 @@ class SyntaxAnalyzer:
     def parse_statements(self):
         while True:
             token = self.current_token()
-            if token[0] == 'KEYWORD' and token[1] == 'begin':
+            if not token:
+                return
+            elif token[0] == 'KEYWORD' and token[1] == 'begin':
                 self.parse_compound_statement()
             elif token[0] == 'ID':
                 self.parse_assignment()
@@ -55,9 +57,13 @@ class SyntaxAnalyzer:
             elif token[0] == 'KEYWORD' and token[1] == 'writeln':
                 self.parse_output_statement()
             elif token[0] == 'KEYWORD' and token[1] == 'if':
-                self.parse_if_statement()
+                self.parse_if_else_statement()
             elif token[0] == 'KEYWORD' and token[1] == 'for':
                 self.parse_for_loop()
+            elif token[0] == 'KEYWORD' and token[1] == 'while':
+                self.parse_while_loop()
+            elif token[0] == 'KEYWORD' and token[1] == 'next':  # Добавляем поддержку `next`
+                self.advance()  # Просто пропускаем
             elif token[0] == 'KEYWORD' and token[1] == 'end':
                 return
             elif token[0] == 'DELIMITER' and token[1] == ';':
@@ -91,12 +97,30 @@ class SyntaxAnalyzer:
 
     def parse_for_loop(self):
         self.expect('KEYWORD', 'for')
-        self.parse_assignment()
+        self.parse_assignment()  # Присваивание начального значения
         self.expect('KEYWORD', 'to')
-        self.parse_expression()
+        self.parse_expression()  # Верхняя граница цикла
         if self.current_token() and self.current_token()[0] == 'KEYWORD' and self.current_token()[1] == 'step':
             self.expect('KEYWORD', 'step')
-            self.parse_expression()
+            self.parse_expression()  # Шаг цикла (опционально)
+        self.expect('KEYWORD', 'begin')  # Начало тела цикла
+
+        while True:
+            token = self.current_token()
+            if token[0] == 'KEYWORD' and token[1] == 'next':  # Обнаружение ключевого слова `next`
+                self.advance()  # Просто пропускаем `next` как отдельный оператор
+            elif token[0] == 'KEYWORD' and token[1] == 'end':  # Завершение тела цикла
+                break
+            else:
+                self.parse_statements()  # Продолжаем разбирать остальные операторы внутри тела цикла
+
+        self.expect('KEYWORD', 'end')  # Завершение конструкции цикла
+
+    def parse_while_loop(self):
+        self.expect('KEYWORD', 'while')
+        self.expect('DELIMITER', '(')
+        self.parse_expression()
+        self.expect('DELIMITER', ')')
         self.expect('KEYWORD', 'begin')
         self.parse_statements()
         self.expect('KEYWORD', 'end')
@@ -127,7 +151,7 @@ class SyntaxAnalyzer:
         else:
             raise SyntaxError(f"Unexpected factor: {token}")
 
-    def parse_if_statement(self):
+    def parse_if_else_statement(self):
         self.expect('KEYWORD', 'if')
         self.expect('DELIMITER', '(')
         self.parse_expression()
