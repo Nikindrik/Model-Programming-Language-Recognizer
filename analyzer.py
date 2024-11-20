@@ -2,49 +2,6 @@ from lexer import LexicalAnalyzer
 from syntax_analyzer import SyntaxAnalyzer
 
 
-codes = ["""
-program
-var a, b, s, i: %;
-begin
-    readln(a, b);
-    s := 0;
-    for i := a to b step 1 do
-    begin
-        s := s + i;
-    end;
-    writeln('Сумма чисел от ', a, ' до ', b, ' равна ', s);
-end.
-""",
-"""
-program
-var
-    a, b, c : %;
-    d : !;
-    e : $;
-begin
-    readln(a, b); {ввод двух целых значений}
-    c := a + b;  {сложение переменных}
-    d := !(a > b); {унарная операция: логическое отрицание сравнения}
-    e := c + " суммировано"; {конкатенация строк}
-
-    if (d == true) then
-        writeln("a меньше либо равно b")
-    else
-        writeln("a больше b");
-
-    for i := 0 to 10 step 2 do
-        writeln(i * i); {вывод квадратов чисел от 0 до 10 с шагом 2}
-
-    while (a != 0) do
-    begin
-        writeln("Цикл выполняется");
-        a := a - 1;
-    end;
-    writeln("Программа завершена.", e);
-end.
-
-"""]
-
 all_codes = [
     '''
 program 
