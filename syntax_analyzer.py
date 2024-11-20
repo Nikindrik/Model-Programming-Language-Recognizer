@@ -63,7 +63,7 @@ class SyntaxAnalyzer:
                 # Переход к следующему оператору
                 self.advance()  # Сдвигаем токены, ожидаем следующий оператор
             else:
-                raise SyntaxError(f"Unexpected statement start: {token}")
+                raise SyntaxError(f"Неожиданное начало оператора: {token}")
 
     def parse_compound_statement(self):
         self.expect('KEYWORD', 'begin')
@@ -76,22 +76,20 @@ class SyntaxAnalyzer:
         self.parse_expression()
 
     def parse_input_statement(self):
-        self.expect('KEYWORD', 'readln')
-        self.expect('DELIMITER', '(')
+        self.expect('KEYWORD', 'readln')  # TODO: ATTENTION self.expect('DELIMITER', '(')
         self.expect('ID')
         while self.current_token() and self.current_token()[0] == 'DELIMITER' and self.current_token()[1] == ',':
             self.expect('DELIMITER', ',')
             self.expect('ID')
-        self.expect('DELIMITER', ')')
+        # TODO: ATTENTION self.expect('DELIMITER', '(')
 
     def parse_output_statement(self):
-        self.expect('KEYWORD', 'writeln')
-        self.expect('DELIMITER', '(')
+        self.expect('KEYWORD', 'writeln')   # TODO: ATTENTION self.expect('DELIMITER', '(')
         self.parse_expression()
         while self.current_token() and self.current_token()[0] == 'DELIMITER' and self.current_token()[1] == ',':
             self.expect('DELIMITER', ',')
             self.parse_expression()
-        self.expect('DELIMITER', ')')
+        # TODO: ATTENTION self.expect('DELIMITER', '(')
 
     def parse_for_loop(self):
         self.expect('KEYWORD', 'for')
@@ -101,7 +99,7 @@ class SyntaxAnalyzer:
         if self.current_token() and self.current_token()[0] == 'KEYWORD' and self.current_token()[1] == 'step':
             self.expect('KEYWORD', 'step')
             self.parse_expression()  # Обрабатываем шаг
-        self.expect('ID', 'do')
+        self.expect('ID', 'next')  # TODO: ATTENTION do
         self.parse_statements()  # Обрабатываем тело цикла (один или несколько операторов внутри цикла)
 
     def parse_expression(self):

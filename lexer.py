@@ -22,13 +22,20 @@ class LexicalAnalyzer:
         self.token_regex = '|'.join(f'(?P<{pair[0]}>{pair[1]})' for pair in self.token_specs)
 
     def tokenize(self, text):
-        """Разделяет текст на токены."""
+        """Разделяет текст на токены с учетом контекста."""
         self.tokens = []
+        in_code_block = False
         for match in re.finditer(self.token_regex, text):
             kind = match.lastgroup
             value = match.group(kind)
             if kind == 'WHITESPACE' or kind == 'COMMENT':
                 continue  # Игнорируем пробелы и комментарии
+            elif kind == 'KEYWORD' and value == 'begin':
+                in_code_block = True
+            elif value == '!' and in_code_block:
+                kind = 'UNARY_OP'  # После `begin` `!` интерпретируется как `UNARY_OP`
+            elif value == '!' and not in_code_block:
+                kind = 'TYPE'  # До `begin` `!` интерпретируется как `TYPE`
             elif kind == 'UNKNOWN':
                 raise SyntaxError(f"Unknown token: {value}")
             self.tokens.append((kind, value))
