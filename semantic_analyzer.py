@@ -54,14 +54,14 @@ class SemanticAnalyzer:
     def parse_assignment(self):  # Присвоения
         variable = self.expect('ID')
         if variable[1] not in self.symbol_table:
-            raise Exception(f"Переменная '{variable[1]}' не была объявлена.")
+            raise Exception(f"Переменная '{variable[1]}' не была объявлена")
         var_type = self.symbol_table[variable[1]]
         self.expect('ASSIGN', ':=')
-        expr_type = self.parse_expression_to_rpn()
+        expr_type = self.parse_expression_to_rpn(variable[1])
         if expr_type != var_type:
-            raise Exception(f"Несоответствие типов: переменная '{variable[1]}' имеет тип {var_type}, но ей присваивается значение типа {expr_type}.")
+            raise Exception(f"Несоответствие типов: переменная '{variable[1]}' имеет тип {var_type}, но ей присваивается значение типа {expr_type}")
 
-    def parse_expression_to_rpn(self):  # Операторы и польская запись
+    def parse_expression_to_rpn(self, variable_name=None):  # Операторы и польская запись
         output_queue = []  # Очередь выхода
         operator_stack = []
         types_stack = []
@@ -91,7 +91,7 @@ class SemanticAnalyzer:
             elif token[0] == 'DELIMITER' and token[1] == ')':
                 while operator_stack and operator_stack[-1][1] != '(':
                     self.apply_operator(output_queue, types_stack, operator_stack.pop())
-                operator_stack.pop()  # Убираем '('
+                operator_stack.pop()
             else:
                 raise Exception(f"Неподдерживаемый элемент в выражении: {token}")
             self.advance()
@@ -101,6 +101,12 @@ class SemanticAnalyzer:
 
         if len(types_stack) != 1:
             raise Exception("Некорректное выражение: не совпадает количество операторов и операндов")
+
+        if variable_name:
+            print(f"Для переменной '{variable_name}' выражение в ОПН: ", end="")
+        for item in output_queue:
+            print(item[1], end=" ")
+        print()
         return types_stack[0]
 
     def apply_operator(self, output_queue, types_stack, operator):  # Применяет оператор, проверяет типы операндов и добавляет результат в стек типов
