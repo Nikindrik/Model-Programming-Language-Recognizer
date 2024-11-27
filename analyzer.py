@@ -54,6 +54,7 @@ begin
     flag := a || b; { Ошибка: несоответствие типов }
 end.
 ''']
+
 code = ['''
 program 
 var a, i, sum, k: %;
@@ -96,10 +97,12 @@ begin
 end.
 ''']
 
+
+
 for elem in code:
     lexer = LexicalAnalyzer()
     tokens = lexer.tokenize(elem)
-    print("Tokens:")
+    print("Токены:")
     # print(tokens)
     for jlem in tokens:
         print(jlem)
