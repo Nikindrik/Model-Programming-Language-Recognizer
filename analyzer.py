@@ -1,6 +1,7 @@
 from lexer import LexicalAnalyzer
 from syntax_analyzer import SyntaxAnalyzer
 from semantic_analyzer import SemanticAnalyzer
+from prettytable import PrettyTable
 
 
 codes = [
@@ -104,8 +105,11 @@ for elem in code:
     tokens = lexer.tokenize(elem)
     print("Токены:")
     # print(tokens)
+    table = PrettyTable()
+    table.field_names = ["Тип токена", "Токен"]
     for jlem in tokens:
-        print(jlem)
+        table.add_row(jlem)
+    print(table)
 
     parser = SyntaxAnalyzer(tokens)
     try:
