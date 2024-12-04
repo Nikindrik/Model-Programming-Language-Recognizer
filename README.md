@@ -5,7 +5,8 @@ Course project on the discipline of TFY
 ```
 python -m venv venv    
 .\venv\Scripts\activate
-pip3 install tk 
+pip install tk 
 pip install Pillow 
+pip install prettytable
 python main.py
 ```
