@@ -101,8 +101,8 @@ end.
 
 
 for elem in code:
-    lexer = LexicalAnalyzer()
-    tokens = lexer.tokenize(elem)
+    lexer = LexicalAnalyzer(elem)
+    tokens = lexer.tokenize()
     print("Токены:")
     # print(tokens)
     table = PrettyTable()

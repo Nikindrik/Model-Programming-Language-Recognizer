@@ -1,42 +1,140 @@
-import re
+from enum import Enum
 
 
 class LexicalAnalyzer:
-    def __init__(self):
-        self.tokens = []
-        self.token_specs = [
-            ('COMMENT', r'\{.*?\}'),  # Многострочные комментарии
-            ('STRING', r"'[^']*'"),  # Строковые литералы
-            ('KEYWORD', r'program|var|begin|end|if|else|for|to|step|next|while|readln|writeln'),  # Ключевые слова
-            ('NUMBER', r'\d+(\.\d+)?([eE][+-]?\d+)?'),  # Числа
-            ('REL_OP', r'!=|==|<=|>=|<|>'),  # Операции отношения
-            ('ADD_OP', r'\+|-|\|\|'),  # Операции сложения
-            ('MUL_OP', r'\*|/|&&'),  # Операции умножения
-            ('UNARY_OP', r'!'),  # Унарная операция
-            ('ID', r'[a-zA-Z_][a-zA-Z_0-9]*'),  # Идентификаторы
-            ('TYPE', r'%|!|\$'),  # Типы данных
-            ('ASSIGN', r':='),  # Присваивание
-            ('DELIMITER', r';|,|:|\(|\)|\.|end\.'),  # Ограничители
-            ('WHITESPACE', r'\s+'),  # Пробелы
-            ('UNKNOWN', r'.'),  # Неизвестные символы
-        ]
-        self.token_regex = '|'.join(f'(?P<{pair[0]}>{pair[1]})' for pair in self.token_specs)
+    class State(Enum):
+        H = "H"  # Начальное состояние
+        ID = "ID"  # Идентификаторы
+        NUM = "NUM"  # Числа
+        COM = "COM"  # Комментарии
+        ALE = "ALE"  # Операции отношения
+        NEQ = "NEQ"  # Неравенство (!=)
+        DELIM = "DELIM"  # Разделители
+        STR = "STR"  # Строковые литералы
 
-    def tokenize(self, text):
+    # Ключевые слова
+    TW = [
+        "program", "var", "begin", "end", "if", "else", "while", "for", "to", "step", "next",
+        "readln", "writeln", "true", "false", "%", "!", "$"
+    ]
+
+    # Разделители и операторы
+    TD = [
+        "{", "}", "(", ")", ",", ":", ";", ":=", ".", "+", "-", "*", "/", "&&", "||", "!",
+        "!=", "==", "<", "<=", ">", ">="
+    ]
+
+    def __init__(self, input_text):
+        self.text = input_text
+        self.pos = 0
+        self.current_char = self.text[self.pos] if self.text else None
         self.tokens = []
-        in_code_block = False
-        for match in re.finditer(self.token_regex, text):
-            kind = match.lastgroup
-            value = match.group(kind)
-            if kind == 'WHITESPACE' or kind == 'COMMENT':
-                continue
-            elif kind == 'KEYWORD' and value == 'begin':
-                in_code_block = True
-            elif value == '!' and in_code_block:
-                kind = 'UNARY_OP'  # После "begin" '!" интерпретируется как "UNARY_OP"
-            elif value == '!' and not in_code_block:
-                kind = 'TYPE'  # До "begin" "!" интерпретируется как тип
-            elif kind == 'UNKNOWN':
-                raise SyntaxError(f"Unknown token: {value}")
-            self.tokens.append((kind, value))
+        self.before_begin = True  # Флаг до появления 'begin'
+
+    def advance(self):
+        """Перемещает указатель на следующий символ."""
+        self.pos += 1
+        self.current_char = self.text[self.pos] if self.pos < len(self.text) else None
+
+    def add_token(self, type_, value):
+        self.tokens.append((type_, value))
+
+    def clear_whitespace(self):
+        """Пропуск пробелов и переносов строк."""
+        while self.current_char and self.current_char in ' \n\r\t':
+            self.advance()
+
+    def parse_identifier_or_keyword(self):
+        """Идентификаторы или ключевые слова."""
+        start = self.pos
+        while self.current_char and (self.current_char.isalnum() or self.current_char == '_'):
+            self.advance()
+        text = self.text[start:self.pos]
+        if text in self.TW:
+            self.add_token('KEYWORD', text)
+            if text == 'begin':
+                self.before_begin = False  # Обновляем флаг после 'begin'
+        else:
+            self.add_token('ID', text)
+
+    def parse_number(self):
+        """Числа (целые и действительные)."""
+        start = self.pos
+        while self.current_char and self.current_char.isdigit():
+            self.advance()
+        if self.current_char == '.':
+            self.advance()
+            while self.current_char and self.current_char.isdigit():
+                self.advance()
+        text = self.text[start:self.pos]
+        self.add_token('NUMBER', text)
+
+    def parse_string(self):
+        """Строковые литералы."""
+        self.advance()  # Пропустить начальный апостроф
+        start = self.pos
+        while self.current_char and self.current_char != "'":
+            self.advance()
+        text = self.text[start:self.pos]
+        self.add_token('STRING', f"'{text}'")  # Включить кавычки
+        self.advance()  # Пропустить конечный апостроф
+
+    def parse_comment(self):
+        """Многострочные комментарии."""
+        self.advance()  # Пропустить '{'
+        while self.current_char and self.current_char != '}':
+            self.advance()
+        self.advance()  # Пропустить '}'
+
+    def parse_delimiter_or_operator(self):
+        """Разделители и операторы."""
+        start = self.pos
+        while self.current_char and (self.text[start:self.pos + 1] in self.TD):
+            self.advance()
+        text = self.text[start:self.pos]
+        if text in ["==", "!=", "<", "<=", ">", ">="]:
+            self.add_token('REL_OP', text)
+        elif text in ["+", "-", "||"]:
+            self.add_token('ADD_OP', text)
+        elif text in ["*", "/", "&&"]:
+            self.add_token('MUL_OP', text)
+        elif text == ":":
+            self.add_token('DELIMITER', text)
+        elif text == ":=":
+            self.add_token('ASSIGN', text)
+        elif text in self.TD:
+            self.add_token('DELIMITER', text)
+        else:
+            self.add_token('UNKNOWN', text)
+
+    def tokenize(self):
+        """Основной цикл обработки текста."""
+        while self.current_char:
+            self.clear_whitespace()
+            if not self.current_char:
+                break
+            if self.current_char.isalpha():
+                self.parse_identifier_or_keyword()
+            elif self.current_char.isdigit():
+                self.parse_number()
+            elif self.current_char == "'":
+                self.parse_string()
+            elif self.current_char == '{':
+                self.parse_comment()
+            elif self.current_char == '!':
+                # Обработка символа "!"
+                if self.before_begin:
+                    self.add_token('KEYWORD', '!')
+                else:
+                    self.add_token('DELIMITER', '!')
+                self.advance()
+            elif self.current_char in "%$":
+                self.add_token('KEYWORD', self.current_char)
+                self.advance()
+            elif self.current_char in self.TD or (
+                    self.current_char in "!<>=" and self.text[self.pos:self.pos + 2] in self.TD):
+                self.parse_delimiter_or_operator()
+            else:
+                self.add_token('UNKNOWN', self.current_char)
+                self.advance()
         return self.tokens

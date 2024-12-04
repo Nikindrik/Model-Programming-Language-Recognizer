@@ -15,7 +15,7 @@ class Lexer:
     # Ключевые слова
     TW = [
         "program", "var", "begin", "end", "if", "else", "while", "for", "to", "step", "next",
-        "readln", "writeln", "true", "false"
+        "readln", "writeln", "true", "false", "%", "!", "$"
     ]
 
     # Разделители и операторы
@@ -24,16 +24,11 @@ class Lexer:
         "!=", "==", "<", "<=", ">", ">="
     ]
 
-    # Типы
-    TYPES = ["%", "!", "$"]
-
     def __init__(self, input_text):
         self.text = input_text
         self.pos = 0
         self.current_char = self.text[self.pos] if self.text else None
         self.tokens = []
-        self.in_type_mode = True  # Указывает, интерпретировать ли `!`, `%`, `$` как TYPE
-        self.found_begin = False  # Флаг для отслеживания, встречен ли токен 'begin'
 
     def advance(self):
         """Перемещает указатель на следующий символ."""
@@ -55,8 +50,6 @@ class Lexer:
             self.advance()
         text = self.text[start:self.pos]
         if text in self.TW:
-            if text == "begin":
-                self.found_begin = True  # Ставим флаг, когда встречен `begin`
             self.add_token('KEYWORD', text)
         else:
             self.add_token('ID', text)
@@ -104,13 +97,6 @@ class Lexer:
             self.add_token('MUL_OP', text)
         elif text == ":":
             self.add_token('DELIMITER', text)
-        elif text in self.TYPES:  # Обработка типов
-            if text == '%' or text == '$':
-                self.add_token('TYPE', text)
-            elif text == "!" and not self.found_begin:  # До встречы 'begin' это TYPE
-                self.add_token('TYPE', text)
-            elif text == "!" and self.found_begin:  # После 'begin' это UNARY_OP
-                self.add_token('UNARY_OP', text)
         elif text == ":=":
             self.add_token('ASSIGN', text)
         elif text in self.TD:
@@ -135,6 +121,9 @@ class Lexer:
             elif self.current_char in self.TD or (
                     self.current_char in "!<>=" and self.text[self.pos:self.pos + 2] in self.TD):
                 self.parse_delimiter_or_operator()
+            elif self.current_char in "%$!":
+                self.add_token('KEYWORD', self.current_char)
+                self.advance()
             else:
                 self.add_token('UNKNOWN', self.current_char)
                 self.advance()

@@ -41,7 +41,7 @@ class SyntaxAnalyzer:
             self.expect('ID')
 
     def parse_type(self):
-        self.expect('TYPE')
+        self.expect('KEYWORD')
 
     def parse_statements(self):
         while True:
