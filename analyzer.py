@@ -61,7 +61,7 @@ program
 var a, i, sum, k: %;
 	r: !;
 	flag: $;
-begin 
+begin
 	a := 5 + 5;  {Это комментарий}
 	if (a > 5)
 	begin
@@ -79,6 +79,10 @@ begin
 		next;
 	end
 	writeln 'sum = ', sum;
+	if (sum >= 10)
+	begin
+		writeln 'sum больше или равно 10';
+	end
 	k := 10
 	while (k != 0)
 	begin

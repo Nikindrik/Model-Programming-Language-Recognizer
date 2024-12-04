@@ -89,7 +89,9 @@ class LexicalAnalyzer:
     def parse_delimiter_or_operator(self):
         """Разделители и операторы."""
         start = self.pos
-        while self.current_char and (self.text[start:self.pos + 1] in self.TD):
+        self.advance()
+        # Попытка прочитать двухсимвольный оператор
+        if self.current_char and (self.text[start:self.pos + 1] in self.TD):
             self.advance()
         text = self.text[start:self.pos]
         if text in ["==", "!=", "<", "<=", ">", ">="]:
@@ -98,8 +100,6 @@ class LexicalAnalyzer:
             self.add_token('ADD_OP', text)
         elif text in ["*", "/", "&&"]:
             self.add_token('MUL_OP', text)
-        elif text == ":":
-            self.add_token('DELIMITER', text)
         elif text == ":=":
             self.add_token('ASSIGN', text)
         elif text in self.TD:
@@ -122,17 +122,22 @@ class LexicalAnalyzer:
             elif self.current_char == '{':
                 self.parse_comment()
             elif self.current_char == '!':
-                # Обработка символа "!"
-                if self.before_begin:
-                    self.add_token('KEYWORD', '!')
+                # Проверка на оператор !=
+                if self.text[self.pos:self.pos + 2] == "!=":
+                    self.add_token('REL_OP', '!=')
+                    self.advance()
+                    self.advance()
                 else:
-                    self.add_token('DELIMITER', '!')
-                self.advance()
+                    # Обработка одиночного !
+                    if self.before_begin:
+                        self.add_token('KEYWORD', '!')
+                    else:
+                        self.add_token('DELIMITER', '!')
+                    self.advance()
             elif self.current_char in "%$":
                 self.add_token('KEYWORD', self.current_char)
                 self.advance()
-            elif self.current_char in self.TD or (
-                    self.current_char in "!<>=" and self.text[self.pos:self.pos + 2] in self.TD):
+            elif self.current_char in self.TD:
                 self.parse_delimiter_or_operator()
             else:
                 self.add_token('UNKNOWN', self.current_char)

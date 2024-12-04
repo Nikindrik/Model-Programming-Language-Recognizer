@@ -33,7 +33,7 @@ class SemanticAnalyzer:
         while self.current_token() and self.current_token()[0] == 'ID':
             ids = self.collect_identifiers()
             self.expect('DELIMITER', ':')
-            var_type = self.expect('TYPE')
+            var_type = self.expect('KEYWORD')
             for var in ids:
                 if var in self.symbol_table:
                     raise Exception(f"Переменная '{var}' уже объявлена.")
