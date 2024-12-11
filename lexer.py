@@ -56,14 +56,30 @@ class LexicalAnalyzer:
 
     def parse_number(self):
         start = self.pos
-        while self.current_char and self.current_char.isdigit():
+
+        # Основной цикл для чисел
+        while self.current_char and (self.current_char.isdigit() or self.current_char.isalpha()):
             self.advance()
-        if self.current_char == '.':
-            self.advance()
-            while self.current_char and self.current_char.isdigit():
-                self.advance()
+
         text = self.text[start:self.pos]
-        self.add_token('NUMBER', text)
+
+        if text[-1] in 'Bb' and all(c in '01' for c in text[:-1]):
+            self.add_token('NUMBER', text)
+        elif text[-1] in 'Oo' and all(c in '01234567' for c in text[:-1]):
+            self.add_token('NUMBER', text)
+        elif text[-1] in 'Hh' and all(c.isdigit() or c.upper() in 'ABCDEF' for c in text[:-1]):
+            self.add_token('NUMBER', text)
+        else:  # Десятичное или действительное число
+            if '.' in text or 'E' in text or 'e' in text:
+                parts = text.split('E') if 'E' in text else text.split('e')
+                if len(parts) == 2 and (parts[1].isdigit() or (parts[1][0] in '+-' and parts[1][1:].isdigit())):
+                    self.add_token('NUMBER', text)
+                else:
+                    self.add_token('UNKNOWN', text)
+            elif text.isdigit():
+                self.add_token('NUMBER', text)
+            else:
+                self.add_token('UNKNOWN', text)
 
     def parse_string(self):
         self.advance()
@@ -75,7 +91,7 @@ class LexicalAnalyzer:
         self.advance()
 
     def parse_comment(self):
-        self.advance()  # Спикаем {
+        self.advance()  # Спускаем {
         while self.current_char and self.current_char != '}':
             self.advance()
         self.advance()  # И снова

@@ -1,46 +1,32 @@
-from lex import lexer
-from pars import Parser
+from lex import LexicalAnalyzer
+from prettytable import PrettyTable
 
 
-def analyze_code(code):
-    try:
-        tokens = lexer(code)
-        print("Tokens:", tokens)
-        parser = Parser(tokens)
-        parser.parse()
-        print("Successful")
-    except SyntaxError as e:
-        print("Parsing error:", e)
+code = ['''
+{
+    % x, y, k;
+    x as 10;
+    y as 5;
+    write(x + y);  /* Вывод: 15 */
+    write(x - y);  /* Вывод: -5 */
+    write(x * y);  /* Вывод: 50 */
+    write(y / x);  /* Вывод: 2 */
+	k as 10
+	while (k != 0) do
+	[
+		write(k);
+		k as k + 1;
+	]
+}
+''']
 
-
-codes = ['''
-    program var a: %; 
-    begin 
-      a := 0;
-      writeln a;
-    end
-    ''', '''
-    program var a: %; 
-    begin 
-      a := 10; 
-      if (a > 5) 
-        writeln 'a больше 5'
-      else 
-        writeln 'a меньше или равно 5'; 
-    end
-    ''', '''
-    program var a, b, s, i: %;
-    begin
-      readln(a, b);
-      sum := 0;
-      for i := a to b step 1 do
-      begin
-        s := s + i;
-      end;
-      writeln('Сумма чисел от ', a, ' до ', b, ' равна ', s);
-    end
-    ''']
-
-
-for elem in codes:
-    analyze_code(elem)
+for elem in code:
+    lexer = LexicalAnalyzer(elem)
+    tokens = lexer.tokenize()
+    print("Токены:")
+    # print(tokens)
+    table = PrettyTable()
+    table.field_names = ["Тип токена", "Токен"]
+    for jlem in tokens:
+        table.add_row(jlem)
+    print(table)
