@@ -1,7 +1,7 @@
 class SemanticAnalyzer:
     def __init__(self, tokens):
         self.tokens = tokens
-        self.symbol_table = {}  # имя переменной : тип
+        self.symbol_table = {'%': '%', '!': '!'}  # имя переменной : тип
         self.current_position = 0
 
     def current_token(self):
@@ -58,8 +58,13 @@ class SemanticAnalyzer:
         var_type = self.symbol_table[variable[1]]
         self.expect('ASSIGN', ':=')
         expr_type = self.parse_expression_to_rpn(variable[1])
-        if expr_type != var_type:
-            raise Exception(f"Несоответствие типов: переменная '{variable[1]}' имеет тип {var_type}, но ей присваивается значение типа {expr_type}")
+
+        # Проверка на соответствие типов
+        if var_type != expr_type:
+            raise Exception(
+                f"Несоответствие типов: переменная '{variable[1]}' имеет тип {var_type}, но ей присваивается значение типа {expr_type}")
+
+        self.symbol_table[variable[1]] = expr_type
 
     def parse_expression_to_rpn(self, variable_name=None):  # Операторы и польская запись
         output_queue = []  # Очередь выхода

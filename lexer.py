@@ -30,16 +30,21 @@ class LexicalAnalyzer:
         self.current_char = self.text[self.pos] if self.text else None
         self.tokens = []
         self.before_begin = True
+        self.level = 0
+        self.raw = 0
 
     def advance(self):
         self.pos += 1
         self.current_char = self.text[self.pos] if self.pos < len(self.text) else None
 
-    def add_token(self, type_, value):
-        self.tokens.append((type_, value))
+    def add_token(self, type_, value, number, level, raw):
+        self.tokens.append((type_, value, number, level, raw))
 
     def clear_whitespace(self):
         while self.current_char and self.current_char in ' \n\r\t':
+            if self.current_char == '\n':
+                self.level += 1
+                self.raw = len(self.tokens)
             self.advance()
 
     def parse_identifier_or_keyword(self):
@@ -48,38 +53,61 @@ class LexicalAnalyzer:
             self.advance()
         text = self.text[start:self.pos]
         if text in self.TW:
-            self.add_token('KEYWORD', text)
+            self.add_token('KEYWORD', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
             if text == 'begin':
                 self.before_begin = False
         else:
-            self.add_token('ID', text)
+            self.add_token('ID', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
 
     def parse_number(self):
         start = self.pos
+        base_detected = False
 
-        # Основной цикл для чисел
-        while self.current_char and (self.current_char.isdigit() or self.current_char.isalpha()):
+        # Проверка на основание числа
+        if self.current_char == '0':
             self.advance()
+            if self.current_char in 'Bb':  # Binary
+                base_detected = True
+                self.advance()
+                while self.current_char and self.current_char in '01':
+                    self.advance()
+            elif self.current_char in 'Oo':  # Octal
+                base_detected = True
+                self.advance()
+                while self.current_char and self.current_char in '01234567':
+                    self.advance()
+            elif self.current_char in 'Xx':  # Hexadecimal
+                base_detected = True
+                self.advance()
+                while self.current_char and (self.current_char.isdigit() or self.current_char.upper() in 'ABCDEF'):
+                    self.advance()
 
-        text = self.text[start:self.pos]
+        if not base_detected:  # Decimal or floating point
+            while self.current_char and self.current_char.isdigit():
+                self.advance()
+            if self.current_char == '.':  # Floating-point
+                self.advance()
+                while self.current_char and self.current_char.isdigit():
+                    self.advance()
+            if self.current_char and self.current_char.upper() == 'E':  # Exponent
+                self.advance()
+                if self.current_char in '+-':  # Optional sign
+                    self.advance()
+                if self.current_char and self.current_char.isdigit():
+                    while self.current_char and self.current_char.isdigit():
+                        self.advance()
+                else:  # Ошибка, если нет числовой части после E
+                    self.add_token('ERROR', self.text[start:self.pos], len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
+                    return
 
-        if text[-1] in 'Bb' and all(c in '01' for c in text[:-1]):
-            self.add_token('NUMBER', text)
-        elif text[-1] in 'Oo' and all(c in '01234567' for c in text[:-1]):
-            self.add_token('NUMBER', text)
-        elif text[-1] in 'Hh' and all(c.isdigit() or c.upper() in 'ABCDEF' for c in text[:-1]):
-            self.add_token('NUMBER', text)
-        else:  # Десятичное или действительное число
-            if '.' in text or 'E' in text or 'e' in text:
-                parts = text.split('E') if 'E' in text else text.split('e')
-                if len(parts) == 2 and (parts[1].isdigit() or (parts[1][0] in '+-' and parts[1][1:].isdigit())):
-                    self.add_token('NUMBER', text)
-                else:
-                    self.add_token('UNKNOWN', text)
-            elif text.isdigit():
-                self.add_token('NUMBER', text)
-            else:
-                self.add_token('UNKNOWN', text)
+        # Объединение числа с суффиксом
+        if self.current_char in 'bohBOH':
+            suffix = self.current_char.lower()
+            self.advance()
+            self.add_token('NUMBER', self.text[start:self.pos] + suffix, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
+        else:
+            text = self.text[start:self.pos]
+            self.add_token('NUMBER', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
 
     def parse_string(self):
         self.advance()
@@ -87,7 +115,7 @@ class LexicalAnalyzer:
         while self.current_char and self.current_char != "'":
             self.advance()
         text = self.text[start:self.pos]
-        self.add_token('STRING', f"'{text}'")
+        self.add_token('STRING', f"'{text}'", len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
         self.advance()
 
     def parse_comment(self):
@@ -103,17 +131,17 @@ class LexicalAnalyzer:
             self.advance()
         text = self.text[start:self.pos]
         if text in ["==", "!=", "<", "<=", ">", ">="]:
-            self.add_token('REL_OP', text)
+            self.add_token('REL_OP', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
         elif text in ["+", "-", "||"]:
-            self.add_token('ADD_OP', text)
+            self.add_token('ADD_OP', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
         elif text in ["*", "/", "&&"]:
-            self.add_token('MUL_OP', text)
+            self.add_token('MUL_OP', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
         elif text == ":=":
-            self.add_token('ASSIGN', text)
+            self.add_token('ASSIGN', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
         elif text in self.TD:
-            self.add_token('DELIMITER', text)
+            self.add_token('DELIMITER', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
         else:
-            self.add_token('UNKNOWN', text)
+            self.add_token('UNKNOWN', text, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
 
     def tokenize(self):
         while self.current_char:
@@ -130,21 +158,21 @@ class LexicalAnalyzer:
                 self.parse_comment()
             elif self.current_char == '!':
                 if self.text[self.pos:self.pos + 2] == "!=":
-                    self.add_token('REL_OP', '!=')
+                    self.add_token('REL_OP', '!=', len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
                     self.advance()
                     self.advance()
                 else:
                     if self.before_begin:
-                        self.add_token('KEYWORD', '!')
+                        self.add_token('KEYWORD', '!', len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
                     else:
-                        self.add_token('DELIMITER', '!')
+                        self.add_token('DELIMITER', '!', len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
                     self.advance()
             elif self.current_char in "%$":
-                self.add_token('KEYWORD', self.current_char)
+                self.add_token('KEYWORD', self.current_char, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
                 self.advance()
             elif self.current_char in self.TD:
                 self.parse_delimiter_or_operator()
             else:
-                self.add_token('UNKNOWN', self.current_char)
+                self.add_token('UNKNOWN', self.current_char, len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
                 self.advance()
         return self.tokens
