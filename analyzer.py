@@ -1,7 +1,9 @@
-from lexer import LexicalAnalyzer
+# from lexer import LexicalAnalyzer
 from syntax_analyzer import SyntaxAnalyzer
 from semantic_analyzer import SemanticAnalyzer
 from prettytable import PrettyTable
+
+from lexer import LexicalAnalyzer
 
 
 code = ['''
@@ -50,6 +52,10 @@ begin
 	begin
 		writeln 'flag имеет значение false'
 	end
+	if (sum == 12)
+	begin
+		writeln 'sum равно 12';
+	end
 end.
 ''']
 
@@ -58,7 +64,6 @@ for elem in code:
     lexer = LexicalAnalyzer(elem)
     tokens = lexer.tokenize()
     print("Токены:")
-    # print(tokens)
     if 'UNKNOWN' in tokens or 'ERROR' in tokens:
         print('Ошибка лексического анализа')
     table = PrettyTable()

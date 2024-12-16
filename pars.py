@@ -1,130 +1,178 @@
-class Parser:
+from enum import Enum
+
+class TokenType(Enum):
+    KEYWORD = "KEYWORD"
+    ID = "ID"
+    NUMBER = "NUMBER"
+    STRING = "STRING"
+    DELIMITER = "DELIMITER"
+    REL_OP = "REL_OP"
+    ADD_OP = "ADD_OP"
+    MUL_OP = "MUL_OP"
+    ASSIGN = "ASSIGN"
+    ERROR = "ERROR"
+
+class SyntaxError(Exception):
+    pass
+
+class SyntaxAnalyzer:
     def __init__(self, tokens):
         self.tokens = tokens
-        self.position = 0
+        self.pos = 0
+        self.current_token = self.tokens[self.pos] if self.tokens else None
 
-    def parse(self):
-        self.program()
-
-    def consume(self, expected_type):
-        token_type, token_value = self.tokens[self.position]
-        if token_type == expected_type:
-            self.position += 1
-            return token_value
+    def advance(self):
+        self.pos += 1
+        if self.pos < len(self.tokens):
+            self.current_token = self.tokens[self.pos]
         else:
-            raise SyntaxError(f"Expected {expected_type} but found {token_type} ({token_value}) at position {self.position}")
+            self.current_token = None
+
+    def consume(self, token_type):
+        if self.current_token and self.current_token[0] == token_type:
+            self.advance()
+        else:
+            raise SyntaxError(f"Expected {token_type}, but found {self.current_token}")
 
     def program(self):
-        self.consume('KEYWORD')  # program
-        self.consume('KEYWORD')  # var
-        self.var_declaration()
-        self.consume('KEYWORD')  # begin
-        self.statement_list()
-        self.consume('KEYWORD')  # end
+        """ program ::= 'program' var <description> begin <statement> end. """
+        if self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "program":
+            self.advance()
+            if self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "var":
+                self.advance()
+                self.description()
+                if self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "begin":
+                    self.advance()
+                    self.statement()
+                    if self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "end":
+                        self.advance()
+                        if self.current_token[0] == TokenType.DELIMITER and self.current_token[1] == ".":
+                            self.advance()
+                        else:
+                            raise SyntaxError("Expected '.' at the end of program.")
+                    else:
+                        raise SyntaxError("Expected 'end' at the end of program.")
+                else:
+                    raise SyntaxError("Expected 'begin' after var declaration.")
+            else:
+                raise SyntaxError("Expected 'var' after 'program'.")
+        else:
+            raise SyntaxError("Expected 'program' at the beginning.")
 
-    def var_declaration(self):
-        while self.peek() == 'IDENTIFIER':
-            self.consume('IDENTIFIER')  # Получаем первый идентификатор
-            while self.peek() == 'SEPARATOR' and self.peek_value() == ',':
-                self.consume('SEPARATOR')  # Пропускаем запятую
-                self.consume('IDENTIFIER')  # Следующий идентификатор
-            self.consume('SEPARATOR')  # :
-            self.consume('TYPE')  # Тип данных (например, integer или %)
-            self.consume('SEPARATOR')  # ;
-
-    def statement_list(self):
-        while self.peek() != 'KEYWORD' or self.peek_value() != 'end':
-            self.statement()
-            if self.peek() == 'SEPARATOR' and self.peek_value() == ';':
-                self.consume('SEPARATOR')
+    def description(self):
+        """ description ::= <identifier> {, <identifier>} : <type>; """
+        # Для простоты, типы данные % | ! | $
+        if self.current_token[0] == TokenType.ID:
+            self.advance()
+            while self.current_token[0] == TokenType.DELIMITER and self.current_token[1] == ",":
+                self.advance()
+                if self.current_token[0] == TokenType.ID:
+                    self.advance()
+                else:
+                    raise SyntaxError("Expected identifier after ','")
+            self.consume(TokenType.DELIMITER)  # ':'
+            self.consume(TokenType.KEYWORD)  # % | ! | $
+            self.consume(TokenType.DELIMITER)  # ';'
+        else:
+            raise SyntaxError("Expected identifier in description.")
 
     def statement(self):
-        if self.peek() == 'IDENTIFIER':
-            self.assignment_statement()  # Присваивание
-        elif self.peek() == 'KEYWORD' and self.peek_value() == 'writeln':
-            self.output_statement()  # Оператор вывода
-        elif self.peek() == 'KEYWORD' and self.peek_value() == 'readln':
-            self.input_statement()  # Оператор ввода
-        elif self.peek() == 'KEYWORD' and self.peek_value() == 'if':
-            self.conditional_statement()  # Условный оператор
-        elif self.peek() == 'KEYWORD' and self.peek_value() == 'for':
-            self.for_loop()  # Цикл for
-        elif self.peek() == 'KEYWORD' and self.peek_value() == 'while':
-            self.while_loop()  # Цикл while
+        """ statement ::= <assignment> | <conditional> | <loop> | <input/output> """
+        if self.current_token[0] == TokenType.ID:
+            self.assignment()
+        elif self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "if":
+            self.conditional()
+        elif self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "while":
+            self.loop()
+        elif self.current_token[0] == TokenType.KEYWORD and self.current_token[1] in ["readln", "write"]:
+            self.input_output()
         else:
-            raise SyntaxError(f"Unexpected statement start: {self.peek()} ({self.peek_value()})")
+            raise SyntaxError("Expected a statement.")
 
-    def input_statement(self):
-        self.consume('KEYWORD')  # readln
-        self.consume('SEPARATOR')  # (
-        while self.peek() == 'IDENTIFIER':
-            self.consume('IDENTIFIER')  # Идентификатор для чтения
-            if self.peek() == 'SEPARATOR' and self.peek_value() == ',':
-                self.consume('SEPARATOR')  # Если запятая, продолжаем читать следующий идентификатор
-            elif self.peek() == 'SEPARATOR' and self.peek_value() == ')':
-                break  # Закрывающая скобка, выходим из цикла
-        self.consume('SEPARATOR')  # Закрывающая скобка )
-
-    def assignment_statement(self):
-        self.consume('IDENTIFIER')  # идентификатор
-        self.consume('OPERATOR')    # :=
-        self.expression()           # выражение после присваивания
-
-    def output_statement(self):
-        self.consume('KEYWORD')  # writeln
+    def assignment(self):
+        """ assignment ::= <identifier> as <expression> """
+        self.consume(TokenType.ID)
+        self.consume(TokenType.ASSIGN)
         self.expression()
-
-    def conditional_statement(self):
-        self.consume('KEYWORD')  # if
-        self.consume('SEPARATOR')  # (
-        self.expression()
-        self.consume('SEPARATOR')  # )
-        self.statement()
-        if self.peek() == 'KEYWORD' and self.peek_value() == 'else':
-            self.consume('KEYWORD')  # else
-            self.statement()
-
-    def for_loop(self):
-        self.consume('KEYWORD')  # for
-        self.assignment_statement()
-        self.consume('KEYWORD')  # to
-        self.expression()
-        if self.peek() == 'KEYWORD' and self.peek_value() == 'step':
-            self.consume('KEYWORD')  # step
-            self.expression()
-        self.statement()
-        self.consume('KEYWORD')  # next
-
-    def while_loop(self):
-        self.consume('KEYWORD')  # while
-        self.consume('SEPARATOR')  # (
-        self.expression()
-        self.consume('SEPARATOR')  # )
-        self.statement()
 
     def expression(self):
-        # Начнем с операнда
-        left = self.operand()
-        # Обрабатываем возможные операции отношения (например, >, <, !=)
-        while self.peek() in ['OPERATOR'] and self.peek_value() in ['!=', '==', '<', '<=', '>', '>=']:
-            operator = self.consume('OPERATOR')  # Считаем операторами отношения
-            right = self.operand()  # Правый операнд
-            left = (left, operator, right)  # Объединяем в выражение
+        """ expression ::= <term> {<add_op> <term>} """
+        self.term()
+        while self.current_token[0] in [TokenType.ADD_OP]:
+            self.advance()
+            self.term()
 
-        return left  # Возвращаем результат выражения
+    def term(self):
+        """ term ::= <factor> {<mul_op> <factor>} """
+        self.factor()
+        while self.current_token[0] in [TokenType.MUL_OP]:
+            self.advance()
+            self.factor()
 
-    def operand(self):
-        if self.peek() == 'IDENTIFIER':
-            return self.consume('IDENTIFIER')  # Возвращаем идентификатор
-        elif self.peek() == 'INTEGER' or self.peek() == 'REAL' or self.peek() == 'NEGATIVE':
-            return self.consume(self.peek())  # Возвращаем число
-        elif self.peek() == 'STRING':  # Строка
-            return self.consume('STRING')
+    def factor(self):
+        """ factor ::= <identifier> | <number> | <string> | <parenthesized_expr> """
+        if self.current_token[0] == TokenType.ID:
+            self.consume(TokenType.ID)
+        elif self.current_token[0] == TokenType.NUMBER:
+            self.consume(TokenType.NUMBER)
+        elif self.current_token[0] == TokenType.STRING:
+            self.consume(TokenType.STRING)
+        elif self.current_token[0] == TokenType.DELIMITER and self.current_token[1] == "(":
+            self.advance()
+            self.expression()
+            self.consume(TokenType.DELIMITER)  # ')'
         else:
-            raise SyntaxError(f"Unexpected token in operand: {self.peek_value()}")
+            raise SyntaxError("Expected a factor.")
 
-    def peek(self):
-        return self.tokens[self.position][0] if self.position < len(self.tokens) else None
+    def conditional(self):
+        """ conditional ::= if <expression> then <statement> [else <statement>] end_else """
+        self.consume(TokenType.KEYWORD)  # "if"
+        self.expression()
+        self.consume(TokenType.KEYWORD)  # "then"
+        self.statement()
+        if self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "else":
+            self.advance()
+            self.statement()
+        self.consume(TokenType.KEYWORD)  # "end_else"
 
-    def peek_value(self):
-        return self.tokens[self.position][1] if self.position < len(self.tokens) else None
+    def loop(self):
+        """ loop ::= while <expression> do <statement> """
+        self.consume(TokenType.KEYWORD)  # "while"
+        self.expression()
+        self.consume(TokenType.KEYWORD)  # "do"
+        self.statement()
+
+    def input_output(self):
+        """ input_output ::= readln (<identifier>) | write (<expression>) """
+        if self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "readln":
+            self.advance()
+            self.consume(TokenType.DELIMITER)  # "("
+            self.consume(TokenType.ID)  # identifier
+            self.consume(TokenType.DELIMITER)  # ")"
+        elif self.current_token[0] == TokenType.KEYWORD and self.current_token[1] == "write":
+            self.advance()
+            self.consume(TokenType.DELIMITER)  # "("
+            self.expression()
+            self.consume(TokenType.DELIMITER)  # ")"
+        else:
+            raise SyntaxError("Expected 'readln' or 'write' for input/output.")
+
+# Пример использования:
+tokens = [
+    (TokenType.KEYWORD, "program"),
+    (TokenType.KEYWORD, "var"),
+    (TokenType.ID, "x"),
+    (TokenType.DELIMITER, ":"),
+    (TokenType.KEYWORD, "%"),
+    (TokenType.DELIMITER, ";"),
+    (TokenType.KEYWORD, "begin"),
+    (TokenType.ID, "x"),
+    (TokenType.ASSIGN, "as"),
+    (TokenType.NUMBER, "5"),
+    (TokenType.DELIMITER, ";"),
+    (TokenType.KEYWORD, "end"),
+    (TokenType.DELIMITER, ".")
+]
+
+syntax_analyzer = SyntaxAnalyzer(tokens)
+syntax_analyzer.program()
