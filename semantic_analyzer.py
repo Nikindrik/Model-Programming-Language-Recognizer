@@ -34,6 +34,8 @@ class SemanticAnalyzer:
             ids = self.collect_identifiers()
             self.expect('DELIMITER', ':')
             var_type = self.expect('KEYWORD')
+            if var_type[1] not in self.symbol_table.values():
+                raise Exception(f"Некорректный тип данных: {var_type[1]}")
             for var in ids:
                 if var in self.symbol_table:
                     raise Exception(f"Переменная '{var}' уже объявлена.")
@@ -58,10 +60,8 @@ class SemanticAnalyzer:
         var_type = self.symbol_table[variable[1]]
         self.expect('ASSIGN', ':=')
         expr_type = self.parse_expression_to_rpn(variable[1])
-
         if var_type != expr_type:
             raise Exception(f"Несоответствие типов: переменная '{variable[1]}' имеет тип {var_type}, но ей присваивается значение типа {expr_type}")
-
         self.symbol_table[variable[1]] = expr_type
 
     def parse_expression_to_rpn(self, variable_name=None):
@@ -75,7 +75,7 @@ class SemanticAnalyzer:
         while self.current_token() and self.current_token()[0] not in {'DELIMITER', 'KEYWORD'}:
             token = self.current_token()
 
-            if token[0] in {'NUMBER', 'ID'}:
+            if token[0] in {'NUMBER', 'ID', 'KEYWORD'}:
                 if token[0] == 'ID':
                     if token[1] not in self.symbol_table:
                         raise Exception(f"Переменная '{token[1]}' не была объявлена.")
@@ -83,8 +83,10 @@ class SemanticAnalyzer:
                 elif token[0] == 'NUMBER':
                     number_type = self.detect_number_type(token[1])
                     types_stack.append(number_type)
+                elif token[0] == 'KEYWORD' and token[1] in {'true', 'false'}:
+                    types_stack.append('$')
                 output_queue.append(token)
-            elif token[0] == 'ADD_OP' or token[0] == 'MUL_OP':
+            elif token[0] in {'ADD_OP', 'MUL_OP', 'LOGIC_OP'}:
                 while operator_stack and operator_stack[-1][1] in precedence and (
                         (associativity[token[1]] == 'L' and precedence[token[1]] <= precedence[operator_stack[-1][1]]) or
                         (associativity[token[1]] == 'R' and precedence[token[1]] < precedence[operator_stack[-1][1]])):
@@ -122,13 +124,12 @@ class SemanticAnalyzer:
         if operator[1] in {'+', '-', '*', '/'}:
             if left_type not in {'%', '!'} or right_type not in {'%', '!'}:
                 raise Exception(f"Оператор {operator[1]} применим только к числовым типам (целым или действительным)")
-            # Результатом арифметических операций будет float, если один из операндов float
             types_stack.append('!' if '!' in (left_type, right_type) else '%')
 
         elif operator[1] in {'&&', '||'}:
-            if left_type != '!' or right_type != '!':
+            if left_type != '$' or right_type != '$':
                 raise Exception(f"Оператор {operator[1]} применим только к логическим типам")
-            types_stack.append('!')
+            types_stack.append('$')
 
         output_queue.append(operator)
 
