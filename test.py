@@ -46,5 +46,6 @@ for elem in code:
         print(f"Ошибка синтаксического анализа: {e}")
         #continue
 
-    semantic_analyzer = SemanticAnalyzer(tokens)
-    semantic_analyzer.analyze()
+    analyzer = SemanticAnalyzer(tokens)
+    result = analyzer.analyze()
+    print(result)
