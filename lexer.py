@@ -89,17 +89,15 @@ class LexicalAnalyzer:
 
     def state_num(self):
         start = self.pos
-
-        # Десятичное или действительное число
         is_real = False
         while self.current_char and (self.current_char.isdigit() or self.current_char in 'ABCDEFabcdef'):
             self.advance()
-        if self.current_char == '.':  # Возможное действительное число
+        if self.current_char == '.':
             is_real = True
             self.advance()
             while self.current_char and self.current_char.isdigit():
                 self.advance()
-        if self.current_char in 'Ee':  # Порядок
+        if self.current_char in 'Ee':
             is_real = True
             self.advance()
             if self.current_char in '+-':
@@ -110,27 +108,26 @@ class LexicalAnalyzer:
             self.add_token('NUMBER', self.text[start:self.pos], len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
             self.state = self.State.H
             return
-
-        if self.current_char in 'Dd':  # Десятичное число с суффиксом
+        if self.current_char in 'Dd':
             self.advance()
             self.add_token('NUMBER', self.text[start:self.pos], len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
             self.state = self.State.H
             return
-        elif self.current_char in 'Bb':  # Двоичное число
+        elif self.current_char in 'Bb':
             self.advance()
             while self.current_char and self.current_char in '01':
                 self.advance()
             self.add_token('NUMBER', self.text[start:self.pos], len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
             self.state = self.State.H
             return
-        elif self.current_char in 'Oo':  # Восьмеричное число
+        elif self.current_char in 'Oo':
             self.advance()
             while self.current_char and self.current_char in '01234567':
                 self.advance()
             self.add_token('NUMBER', self.text[start:self.pos], len(self.tokens) + 1, self.level, len(self.tokens) + 1 - self.raw)
             self.state = self.State.H
             return
-        elif self.current_char in 'Hh':  # Шестнадцатеричное число
+        elif self.current_char in 'Hh':
             self.advance()
             while self.current_char and (self.current_char.isdigit() or self.current_char in 'ABCDEFabcdef'):
                 self.advance()
@@ -184,7 +181,6 @@ class LexicalAnalyzer:
 
 
     def peek(self):
-        """Возвращает следующий символ без изменения позиции"""
         return self.text[self.pos + 1] if self.pos + 1 < len(self.text) else ''
 
     def clear_whitespace(self):

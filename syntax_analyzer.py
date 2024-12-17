@@ -195,27 +195,22 @@ class SyntaxAnalyzer:
         if token[0] != 'NUMBER':
             return False
         value = token[1]
-        # Проверяем, начинается ли число с '0b' или '0B'
-        if value.startswith(('0b', '0B')):
-            # Проверяем, что оставшаяся часть состоит только из 0 и 1
-            return all(c in '01' for c in value[2:])
+        if value.endswith(('b', 'B')):
+            return all(c in '01' for c in value[:1])
         return False
 
     def is_octal(self, token):
         if token[0] != 'NUMBER':
             return False
         value = token[1]
-        # Проверяем, начинается ли число с '0o' или '0O'
-        if value.startswith(('0o', '0O')):
-            # Проверяем, что оставшаяся часть состоит только из символов 0-7
-            return all(c in '01234567' for c in value[2:])
+        if value.endswith(('o', 'O')):
+            return all(c in '01234567' for c in value[:1])
         return False
 
     def is_decimal(self, token):
         if token[0] != 'NUMBER':
             return False
         value = token[1]
-        # Проверка: число без суффикса (чисто цифры) или с суффиксом 'd'/'D'
         if value.isdigit():
             return True
         if value.endswith(('d', 'D')):
@@ -226,20 +221,16 @@ class SyntaxAnalyzer:
         if token[0] != 'NUMBER':
             return False
         value = token[1]
-        # Проверяем, начинается ли число с '0x' или '0X'
-        if value.startswith(('0x', '0X')):
-            # Проверяем, что оставшаяся часть состоит только из допустимых символов
+        if value.endswith(('h', 'H')):
             valid_chars = set('0123456789ABCDEFabcdef')
-            return all(c in valid_chars for c in value[2:])
+            return all(c in valid_chars for c in value[:1])
         return False
 
     def is_real(self, token):
         if token[0] != 'NUMBER':
             return False
         value = token[1]
-        # Число с плавающей точкой, возможно с экспонентой
         try:
-            # Используем встроенную обработку float в Python для проверки формата
             float(value)
             return True
         except ValueError:
